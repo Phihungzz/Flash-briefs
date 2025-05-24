@@ -1,4 +1,4 @@
-require('dotenv').config(); // Load biến môi trường từ .env
+require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -8,15 +8,13 @@ const bcrypt = require('bcrypt');
 
 const app = express();
 
-// Cấu hình CORS
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? 'https://your-flutter-app-domain.com' : '*',
+  origin: process.env.NODE_ENV === 'production' ? 'https://flash-briefs.vercel.app' : '*',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
 
-// Middleware để log request
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.ip}`);
   next();
@@ -24,16 +22,13 @@ app.use((req, res, next) => {
 
 const saltRounds = 10;
 
-// Biến môi trường với giá trị mặc định
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://Phihung:123@cluster0.s6o0yeb.mongodb.net/flash_briefs?retryWrites=true&w=majority';
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_key';
 
-// Kết nối MongoDB
 mongoose.connect(MONGO_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Defining user schema
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -41,10 +36,8 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
-// Import router articles
 const articlesRouter = require('./src/routes/articles');
 
-// --- Các route Auth ---
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -56,7 +49,6 @@ app.post('/api/auth/register', async (req, res) => {
 
     const token = jwt.sign({ email, id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
     console.log(`User registered: ${email}`);
-
     res.status(200).json({ token, user: { email, role: user.role } });
   } catch (error) {
     console.error('Register error:', error.message);
@@ -76,7 +68,6 @@ app.post('/api/auth/login', async (req, res) => {
 
     const token = jwt.sign({ email, id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
     console.log(`User logged in: ${email}`);
-
     res.status(200).json({ token, user: { email, role: user.role } });
   } catch (error) {
     console.error('Login error:', error.message);
@@ -101,16 +92,6 @@ app.get('/api/auth/verify', async (req, res) => {
   }
 });
 
-// Mount routes
 app.use('/api/articles', articlesRouter);
 
-// Chạy server cục bộ (không cần khi triển khai trên Vercel)
-const PORT = process.env.PORT || 5000;
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-  });
-}
-
-// Export the app for Vercel
 module.exports = app;
