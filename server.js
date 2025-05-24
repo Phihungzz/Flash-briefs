@@ -1,5 +1,3 @@
-
-
 require('dotenv').config(); // Load biến môi trường từ .env
 
 const express = require('express');
@@ -34,7 +32,7 @@ const User = mongoose.model('User', userSchema);
 const articlesRouter = require('./src/routes/articles');
 
 // --- Các route Auth ---
-app.post('/api/auth/register', async (req, res) => {
+app.post('/auth/register', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) throw new Error('Email and password are required');
@@ -53,7 +51,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) throw new Error('Email and password are required');
@@ -73,7 +71,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.get('/api/auth/verify', async (req, res) => {
+app.get('/auth/verify', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) throw new Error('No token provided');
