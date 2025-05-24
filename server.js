@@ -36,62 +36,10 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
+const authRouter = require('./src/routes/auth');
 const articlesRouter = require('./src/routes/articles');
 
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) throw new Error('Email and password are required');
-
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-    const user = new User({ email, password: hashedPassword });
-    await user.save();
-
-    const token = jwt.sign({ email, id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
-    console.log(`User registered: ${email}`);
-    res.status(200).json({ token, user: { email, role: user.role } });
-  } catch (error) {
-    console.error('Register error:', error.message);
-    res.status(400).json({ error: error.message });
-  }
-});
-
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) throw new Error('Email and password are required');
-
-    const user = await User.findOne({ email });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      throw new Error('Invalid credentials');
-    }
-
-    const token = jwt.sign({ email, id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
-    console.log(`User logged in: ${email}`);
-    res.status(200).json({ token, user: { email, role: user.role } });
-  } catch (error) {
-    console.error('Login error:', error.message);
-    res.status(400).json({ error: error.message });
-  }
-});
-
-app.get('/api/auth/verify', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) throw new Error('No token provided');
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findOne({ email: decoded.email });
-    if (!user) throw new Error('User not found');
-
-    console.log(`Token verified for user: ${user.email}`);
-    res.status(200).json({ user: { email: user.email, role: user.role } });
-  } catch (error) {
-    console.error('Verify error:', error.message);
-    res.status(401).json({ error: error.message });
-  }
-});
-
+app.use('/api/auth', authRouter);
 app.use('/api/articles', articlesRouter);
 
 module.exports = app;
