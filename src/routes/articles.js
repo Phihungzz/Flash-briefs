@@ -8,15 +8,30 @@ const savedArticleSchema = new mongoose.Schema({
   userEmail: { type: String, required: true },
   articleId: { type: String, required: true },
   title: { type: String, required: true },
+  url: { type: String, required: true },
+  urlToImage: { type: String },
+  description: { type: String },
+  author: { type: String },
+  publishedAt: { type: Date },
+  content: { type: String },
   savedAt: { type: Date, default: Date.now },
 });
-const SavedArticle = mongoose.model('SavedArticle', savedArticleSchema);
+const SavedArticle = mongoose.models.SavedArticle || mongoose.model('SavedArticle', savedArticleSchema);
 
 router.post('/saved', authMiddleware, async (req, res) => {
-  const { title, articleId } = req.body;
+  const {
+    articleId,
+    title,
+    url,
+    urlToImage,
+    description,
+    author,
+    publishedAt,
+    content,
+  } = req.body;
 
-  if (!title || !articleId) {
-    return res.status(400).json({ error: 'Missing required fields: title or url' });
+  if (!articleId || !title || !url) {
+    return res.status(400).json({ error: 'Missing required fields: articleId, title or url' });
   }
 
   try {
@@ -31,6 +46,12 @@ router.post('/saved', authMiddleware, async (req, res) => {
       userEmail: req.user.email,
       articleId,
       title,
+      url,
+      urlToImage,
+      description,
+      author,
+      publishedAt: publishedAt ? new Date(publishedAt) : undefined,
+      content,
       savedAt: new Date(),
     });
 
