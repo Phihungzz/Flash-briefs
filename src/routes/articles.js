@@ -1,63 +1,55 @@
 const express = require('express');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-const Article = require('../models/Article');
-const User = require('../models/User');
+const mongoose = require('mongoose');
+const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
-// POST /api/articles/save
-router.post('/save', authMiddleware, async (req, res) => {
-  const { title, url, publishedAt, urlToImage } = req.body;
+const savedArticleSchema = new mongoose.Schema({
+  userEmail: { type: String, required: true },
+  articleId: { type: String, required: true },
+  title: { type: String, required: true },
+  savedAt: { type: Date, default: Date.now },
+});
+const SavedArticle = mongoose.model('SavedArticle', savedArticleSchema);
 
-  if (!title || !url) {
-    return res.status(400).json({ message: 'Missing required fields: title or url' });
+router.post('/saved', authMiddleware, async (req, res) => {
+  const { title, articleId } = req.body;
+
+  if (!title || !articleId) {
+    return res.status(400).json({ error: 'Missing required fields: title or url' });
   }
 
   try {
-    console.log('➡️ Save request by user:', req.user); 
+    console.log('➡️ Save request by user:', req.user.email, 'title:', title);
 
-    const existing = await Article.findOne({ userId: req.user.id, url });
+    const existing = await SavedArticle.findOne({ userEmail: req.user.email, articleId });
     if (existing) {
-      return res.status(409).json({ message: 'Article already saved' });
+      return res.status(409).json({ error: 'Article already saved' });
     }
 
-    const article = new Article({
-      userId: req.user.id,
+    const article = new SavedArticle({
+      userEmail: req.user.email,
+      articleId,
       title,
-      url,
-      publishedAt,
-      urlToImage,
+      savedAt: new Date(),
     });
 
     await article.save();
-    await User.findByIdAndUpdate(req.user.id, { $push: { savedArticles: article._id } });
 
-    res.json({ message: 'Article saved', article });
+    res.status(200).json({ message: 'Article saved successfully', savedArticle: article });
   } catch (error) {
-    console.error('❌ Save article error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Save article error:', error.message);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-// GET /api/articles/saved
 router.get('/saved', authMiddleware, async (req, res) => {
   try {
-    const articles = await Article.find({ userId: req.user.id });
-    res.json(articles);
+    const articles = await SavedArticle.find({ userEmail: req.user.email });
+    res.status(200).json({ savedArticles: articles });
   } catch (error) {
-    console.error('❌ Get saved articles error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// GET /api/articles/all-saved
-router.get('/all-saved', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const articles = await Article.find().populate('userId', 'email');
-    res.json(articles);
-  } catch (error) {
-    console.error('❌ Get all saved articles error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Get saved articles error:', error.message);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
