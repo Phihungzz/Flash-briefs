@@ -1,12 +1,9 @@
-require('dotenv').config(); 
-
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const router = express.Router();
 
-// Register
 router.post('/register', async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -16,12 +13,15 @@ router.post('/register', async (req, res) => {
     user = new User({
       email,
       password: await bcrypt.hash(password, 10),
+      role: 'user', // Mặc định role là user
     });
     await user.save();
 
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
     res.json({ token, user: { id: user._id, email, role: user.role } });
   } catch (error) {
@@ -29,7 +29,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -39,9 +38,11 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
     res.json({ token, user: { id: user._id, email, role: user.role } });
   } catch (error) {
