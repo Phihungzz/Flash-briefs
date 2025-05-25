@@ -1,28 +1,24 @@
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
-  // Lấy token từ header Authorization (định dạng: "Bearer <token>")
-  const authHeader = req.header('Authorization');
-  if (!authHeader) return res.status(401).json({ message: 'No token provided' });
-
-  const token = authHeader.replace('Bearer ', '');
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;  // gán thông tin user cho request
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) throw new Error('No token provided');
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default_secret_key');
+    if (!decoded.email) throw new Error('Email not found in token');
+
+    req.user = decoded; // { id, email, role }
     next();
   } catch (error) {
-    res.status(401).json({ message: 'Invalid token' });
+    console.error('Auth middleware error:', error.message);
+    res.status(401).json({ error: 'Unauthorized' });
   }
 };
 
 const adminMiddleware = (req, res, next) => {
-  // Đảm bảo authMiddleware chạy trước middleware này
-  if (!req.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
   if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
+    return res.status(403).json({ error: 'Access denied' });
   }
   next();
 };
