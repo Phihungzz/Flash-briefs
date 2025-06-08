@@ -74,4 +74,20 @@ router.get('/saved', authMiddleware, async (req, res) => {
   }
 });
 
+router.delete('/saved/:id', authMiddleware, async (req, res) => {
+  const savedArticleId = req.params.id;
+  const userEmail = req.user.email;
+
+  try {
+    const deleted = await SavedArticle.findOneAndDelete({ _id: savedArticleId, userEmail });
+    if (!deleted) {
+      return res.status(404).json({ error: 'Saved article not found or not authorized' });
+    }
+    res.status(200).json({ message: 'Article deleted successfully' });
+  } catch (error) {
+    console.error('❌ Delete saved article error:', error.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;
